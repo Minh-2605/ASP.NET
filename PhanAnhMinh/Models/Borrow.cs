@@ -27,6 +27,13 @@ namespace PhanAnhMinh.Models
         public string BorrowerName { get; set; } = string.Empty;
 
         [Required]
+        public int UserId { get; set; }
+        public User? User { get; set; }
+
+        public DateTime DueDate { get; set; }     // Ngày hẹn trả
+        public DateTime? ReturnDate { get; set; } // Ngày trả thực tế (để dấu ? vì lúc mới mượn chưa có ngày này)
+
+        [Required]
         public DateTime BorrowDate { get; set; } = DateTime.UtcNow;
 
         public DateTime? ExpectedReturnDate { get; set; }
