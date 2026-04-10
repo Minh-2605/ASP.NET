@@ -27,7 +27,7 @@ namespace PhanAnhMinh.Models
         public string BorrowerName { get; set; } = string.Empty;
 
         [Required]
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
         public User? User { get; set; }
 
         public DateTime DueDate { get; set; }     // Ngày hẹn trả
