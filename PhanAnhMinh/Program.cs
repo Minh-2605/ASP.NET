@@ -3,12 +3,22 @@ using PhanAnhMinh.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Cấu hình Port cho Render (Phải để TRƯỚC builder.Build)
+// 1. Cấu hình Port cho Render
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
+// 2. Đăng ký DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// 3. CẤU HÌNH CORS (Phải nằm TRƯỚC builder.Build)
+builder.Services.AddCors(options => {
+    options.AddPolicy("AllowAll", policy => {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -16,15 +26,18 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 2. QUAN TRỌNG: Đưa Swagger ra ngoài dấu ngoặc "if"
+// 4. KÍCH HOẠT CORS (Phải nằm TRƯỚC MapControllers và TRƯỚC Authorization)
+app.UseCors("AllowAll");
+
+// 5. Cấu hình Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "PhanAnhMinh API V1");
-    c.RoutePrefix = string.Empty; // Để khi vào link Render là thấy API ngay
+    c.RoutePrefix = string.Empty;
 });
 
-// app.UseHttpsRedirection(); // Tạm thời comment nếu Render báo lỗi vòng lặp chuyển hướng
+// app.UseHttpsRedirection(); // Để comment như cũ để tránh lỗi trên Render
 app.UseAuthorization();
 app.MapControllers();
 
