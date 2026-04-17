@@ -12,8 +12,8 @@ using PhanAnhMinh.Data;
 namespace PhanAnhMinh.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260410013241_Userating")]
-    partial class Userating
+    [Migration("20260417024732_FinalFix")]
+    partial class FinalFix
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -78,9 +78,6 @@ namespace PhanAnhMinh.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("ActualReturnDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("BookId")
                         .HasColumnType("int");
 
@@ -98,26 +95,20 @@ namespace PhanAnhMinh.Migrations
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("ExpectedReturnDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime?>("ReturnDate")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<Guid?>("UserId1")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("BookId");
 
-                    b.HasIndex("UserId1");
+                    b.HasIndex("UserId");
 
                     b.ToTable("Borrows");
                 });
@@ -222,7 +213,9 @@ namespace PhanAnhMinh.Migrations
 
                     b.HasOne("PhanAnhMinh.Models.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId1");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Book");
 

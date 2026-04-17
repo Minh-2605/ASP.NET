@@ -6,10 +6,11 @@ namespace PhanAnhMinh.Models
 {
     public enum BorrowStatus
     {
-        BORROWED,
-        RETURNED,
-        LATE
+        BORROWED, // Đang mượn
+        RETURNED, // Đã trả
+        LATE      // Quá hạn
     }
+
     public class Borrow
     {
         [Key]
@@ -18,7 +19,6 @@ namespace PhanAnhMinh.Models
         [Required]
         public int BookId { get; set; }
 
-        // Navigation property
         [ForeignKey("BookId")]
         public virtual Book? Book { get; set; }
 
@@ -28,17 +28,17 @@ namespace PhanAnhMinh.Models
 
         [Required]
         public Guid UserId { get; set; }
-        public User? User { get; set; }
 
-        public DateTime DueDate { get; set; }     // Ngày hẹn trả
-        public DateTime? ReturnDate { get; set; } // Ngày trả thực tế (để dấu ? vì lúc mới mượn chưa có ngày này)
+        // Navigation property - Chỉ giữ lại 1 User duy nhất để tránh UserId1
+        public virtual User? User { get; set; }
 
         [Required]
         public DateTime BorrowDate { get; set; } = DateTime.UtcNow;
 
-        public DateTime? ExpectedReturnDate { get; set; }
+        [Required]
+        public DateTime DueDate { get; set; }     // Ngày hẹn trả (Thay thế cho ExpectedReturnDate)
 
-        public DateTime? ActualReturnDate { get; set; }
+        public DateTime? ReturnDate { get; set; } // Ngày trả thực tế (Thay thế cho ActualReturnDate)
 
         [Required]
         public BorrowStatus Status { get; set; } = BorrowStatus.BORROWED;
