@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PhanAnhMinh.Data;
@@ -28,7 +27,7 @@ namespace PhanAnhMinh.Controllers
             return await _context.Borrows
                 .Include(b => b.Book)
                 .Include(b => b.User)
-                .OrderByDescending(b => b.BorrowDate) // Sắp xếp mới nhất lên đầu
+                .OrderByDescending(b => b.BorrowDate)
                 .ToListAsync();
         }
 
@@ -41,8 +40,7 @@ namespace PhanAnhMinh.Controllers
                 .Include(b => b.User)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
-            if (borrow == null) return NotFound("Không tìm thấy đơn mượn này.");
-
+            if (borrow == null) return NotFound("Không tìm thấy đơn mượn.");
             return borrow;
         }
 
@@ -53,22 +51,16 @@ namespace PhanAnhMinh.Controllers
             var book = await _context.Books.FindAsync(borrow.BookId);
             if (book == null) return NotFound("Sách không tồn tại.");
 
-            if (book.Status != "Available")
-            {
-                return BadRequest("Sách này hiện không sẵn sàng để mượn.");
-            }
+            // Chỉ cho mượn nếu sách đang Available
+            if (book.Status != "Available") return BadRequest("Sách này hiện không sẵn sàng.");
 
-            // Tự động gán các giá trị mặc định nếu client không gửi
+            // Gán các giá trị mặc định cho đơn mới
             borrow.BorrowDate = DateTime.UtcNow;
             borrow.CreatedAt = DateTime.UtcNow;
             borrow.Status = BorrowStatus.BORROWED;
+            if (borrow.DueDate == default) borrow.DueDate = DateTime.UtcNow.AddDays(14);
 
-            if (borrow.DueDate == default)
-            {
-                borrow.DueDate = DateTime.UtcNow.AddDays(14); // Mặc định mượn 14 ngày
-            }
-
-            // Cập nhật trạng thái sách
+            // Chuyển trạng thái sách sang mượn
             book.Status = "Borrowed";
 
             _context.Borrows.Add(borrow);
@@ -77,7 +69,29 @@ namespace PhanAnhMinh.Controllers
             return CreatedAtAction("GetBorrow", new { id = borrow.Id }, borrow);
         }
 
-        // 4. NGHIỆP VỤ TRẢ SÁCH (PUT)
+        // 4. CẬP NHẬT THÔNG TIN ĐƠN MƯỢN (PUT)
+        // Giải quyết lỗi 405 Method Not Allowed khi gọi trực tiếp vào ID
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutBorrow(int id, Borrow borrow)
+        {
+            if (id != borrow.Id) return BadRequest("ID không khớp.");
+
+            _context.Entry(borrow).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Borrows.Any(e => e.Id == id)) return NotFound();
+                throw;
+            }
+
+            return NoContent();
+        }
+
+        // 5. NGHIỆP VỤ TRẢ SÁCH NHANH (PUT)
         [HttpPut("return/{id}")]
         public async Task<IActionResult> ReturnBook(int id)
         {
@@ -88,49 +102,28 @@ namespace PhanAnhMinh.Controllers
             if (borrow == null) return NotFound("Đơn mượn không tồn tại.");
             if (borrow.ReturnDate != null) return BadRequest("Sách này đã được trả rồi.");
 
-            // Cập nhật thông tin trả sách
+            // Cập nhật ngày trả và trạng thái
             borrow.ReturnDate = DateTime.UtcNow;
             borrow.Status = BorrowStatus.RETURNED;
 
+            // Mở khóa sách để người khác mượn
             if (borrow.Book != null)
             {
                 borrow.Book.Status = "Available";
             }
 
             await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Trả sách thành công!",
-                returnDate = borrow.ReturnDate,
-                status = "RETURNED"
-            });
+            return Ok(new { message = "Trả sách thành công!", status = "RETURNED" });
         }
 
-        // 5. NGHIỆP VỤ KIỂM TRA SÁCH QUÁ HẠN
-        [HttpGet("overdue")]
-        public async Task<ActionResult<IEnumerable<Borrow>>> GetOverdue()
-        {
-            var today = DateTime.UtcNow;
-            var overdueList = await _context.Borrows
-                .Where(b => b.ReturnDate == null && b.DueDate < today)
-                .Include(b => b.Book)
-                .Include(b => b.User)
-                .ToListAsync();
-
-            // Cập nhật Enum Status sang LATE cho các đơn này (nếu cần)
-            foreach (var b in overdueList) { b.Status = BorrowStatus.LATE; }
-
-            return Ok(overdueList);
-        }
-
-        // 6. XÓA ĐƠN MƯỢN
+        // 6. XÓA ĐƠN MƯỢN (DELETE)
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBorrow(int id)
         {
             var borrow = await _context.Borrows.FindAsync(id);
             if (borrow == null) return NotFound();
 
+            // Nếu xóa đơn mượn khi chưa trả sách, trả lại trạng thái sách về Available
             var book = await _context.Books.FindAsync(borrow.BookId);
             if (book != null && borrow.ReturnDate == null)
             {
