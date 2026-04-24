@@ -92,30 +92,29 @@ namespace PhanAnhMinh.Controllers
             return CreatedAtAction("GetUser", new { id = user.Id }, user);
         }
 
+
         // POST: api/Users/login
         // POST: api/Users/login
         [HttpPost("login")]
         public async Task<ActionResult<object>> Login([FromBody] LoginRequest request)
         {
-            // 1. Tìm user theo Username trong database
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            // 2. Kiểm tra user tồn tại và so khớp mật khẩu
             if (user == null || user.PasswordHash != request.Password)
             {
                 return Unauthorized("Tên đăng nhập hoặc mật khẩu không chính xác.");
             }
 
-            // 3. TRẢ VỀ ĐẦY ĐỦ THÔNG TIN (Quan trọng nhất)
-            return new
+            // Ép kiểu về object cụ thể để tránh lỗi tự động viết hoa (PascalCase) của JSON
+            return Ok(new
             {
                 token = "fake-jwt-token-for-minh",
-                id = user.Id,         // Thêm dòng này để Frontend biết UserId
+                id = user.Id.ToString(), // Chuyển Guid thành String để Frontend dễ xử lý
                 username = user.Username,
                 email = user.Email,
-                role = user.Role      // Thêm dòng này để Frontend biết quyền Admin/User
-            };
+                role = user.Role // Phải có cột này trong DB
+            });
         }
 
         // Class bổ trợ để nhận dữ liệu từ Frontend
