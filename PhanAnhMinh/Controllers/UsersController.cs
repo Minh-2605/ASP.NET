@@ -93,6 +93,7 @@ namespace PhanAnhMinh.Controllers
         }
 
         // POST: api/Users/login
+        // POST: api/Users/login
         [HttpPost("login")]
         public async Task<ActionResult<object>> Login([FromBody] LoginRequest request)
         {
@@ -101,18 +102,19 @@ namespace PhanAnhMinh.Controllers
                 .FirstOrDefaultAsync(u => u.Username == request.Username);
 
             // 2. Kiểm tra user tồn tại và so khớp mật khẩu
-            // Lưu ý: Chủ nhân nên dùng thư viện BCrypt để kiểm tra PasswordHash thay vì so sánh chuỗi trực tiếp
             if (user == null || user.PasswordHash != request.Password)
             {
                 return Unauthorized("Tên đăng nhập hoặc mật khẩu không chính xác.");
             }
 
-            // 3. Trả về thông tin user và token (giả lập hoặc JWT)
+            // 3. TRẢ VỀ ĐẦY ĐỦ THÔNG TIN (Quan trọng nhất)
             return new
             {
-                token = "fake-jwt-token-for-minh", // Sau này chủ nhân thay bằng JWT thật
+                token = "fake-jwt-token-for-minh",
+                id = user.Id,         // Thêm dòng này để Frontend biết UserId
                 username = user.Username,
-                email = user.Email
+                email = user.Email,
+                role = user.Role      // Thêm dòng này để Frontend biết quyền Admin/User
             };
         }
 
