@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -82,6 +82,37 @@ namespace PhanAnhMinh.Controllers
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetUser", new { id = user.Id }, user);
+        }
+
+        // POST: api/Users/login
+        [HttpPost("login")]
+        public async Task<ActionResult<object>> Login([FromBody] LoginRequest request)
+        {
+            // 1. Tìm user theo Username trong database
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username == request.Username);
+
+            // 2. Kiểm tra user tồn tại và so khớp mật khẩu
+            // Lưu ý: Chủ nhân nên dùng thư viện BCrypt để kiểm tra PasswordHash thay vì so sánh chuỗi trực tiếp
+            if (user == null || user.PasswordHash != request.Password)
+            {
+                return Unauthorized("Tên đăng nhập hoặc mật khẩu không chính xác.");
+            }
+
+            // 3. Trả về thông tin user và token (giả lập hoặc JWT)
+            return new
+            {
+                token = "fake-jwt-token-for-minh", // Sau này chủ nhân thay bằng JWT thật
+                username = user.Username,
+                email = user.Email
+            };
+        }
+
+        // Class bổ trợ để nhận dữ liệu từ Frontend
+        public class LoginRequest
+        {
+            public string Username { get; set; }
+            public string Password { get; set; }
         }
 
         // DELETE: api/Users/5
