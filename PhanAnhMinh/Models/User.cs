@@ -20,5 +20,6 @@ namespace PhanAnhMinh.Models
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string Role { get; set; } = "User";
     }
 }
