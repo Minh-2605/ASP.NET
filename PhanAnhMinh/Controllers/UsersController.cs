@@ -78,6 +78,14 @@ namespace PhanAnhMinh.Controllers
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user)
         {
+            var exists = await _context.Users
+        .AnyAsync(u => u.Username == user.Username);
+
+            if (exists)
+            {
+                // Trả về lỗi 400 kèm thông báo
+                return BadRequest("Tên đăng nhập này đã có người sử dụng. Chủ nhân chọn tên khác nhé!");
+            }
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
