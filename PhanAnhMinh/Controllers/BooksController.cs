@@ -28,14 +28,24 @@ namespace PhanAnhMinh.Controllers
         {
             try
             {
-                // Trả về danh sách thô, không Select thủ công nữa để tránh lỗi Mapping
-                var books = await _context.Books.AsNoTracking().ToListAsync();
+                var books = await _context.Books
+                    .AsNoTracking()
+                    .Select(b => new {
+                        id = b.Id,
+                        title = b.Title,
+                        author = b.Author,
+                        categoryId = b.CategoryId,
+                        quantity = b.Quantity, // Đảm bảo cột này đã có trong DB
+                        image = b.Image,
+                        status = b.Status
+                    })
+                    .ToListAsync();
                 return Ok(books);
             }
             catch (Exception ex)
             {
-                // Nếu vẫn lỗi, dòng này sẽ giúp chủ nhân thấy lỗi gì trong Log của Render
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                // Trả về thông báo lỗi thật để mình nhìn thấy ở F12
+                return StatusCode(500, new { Error = ex.Message });
             }
         }
 
