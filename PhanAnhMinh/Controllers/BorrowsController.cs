@@ -20,7 +20,7 @@ namespace PhanAnhMinh.Controllers
             _context = context;
         }
 
-        // 1. LẤY DANH SÁCH MƯỢN (Đã sửa để tránh lỗi 500 Circular Reference)
+        // 1. LẤY DANH SÁCH MƯỢN
         [HttpGet]
         public async Task<IActionResult> GetBorrows()
         {
@@ -31,16 +31,13 @@ namespace PhanAnhMinh.Controllers
                 .Select(b => new {
                     id = b.Id,
                     bookId = b.BookId,
-                    // Lấy Title từ object Book, nếu null thì hiện N/A
                     book = b.Book != null ? new { title = b.Book.Title } : null,
                     userId = b.UserId,
-                    // Ưu tiên lấy Username từ bảng User nếu có liên kết
                     borrowerName = b.User != null ? b.User.Username : b.BorrowerName,
                     borrowDate = b.BorrowDate,
                     dueDate = b.DueDate,
                     returnDate = b.ReturnDate,
                     status = (int)b.Status,
-                    
                 })
                 .ToListAsync();
 
@@ -58,7 +55,6 @@ namespace PhanAnhMinh.Controllers
 
             if (b == null) return NotFound("Không tìm thấy đơn mượn.");
 
-            // Trả về object sạch để tránh lỗi vòng lặp
             var result = new
             {
                 id = b.Id,
@@ -70,28 +66,37 @@ namespace PhanAnhMinh.Controllers
                 dueDate = b.DueDate,
                 returnDate = b.ReturnDate,
                 status = (int)b.Status,
-                
             };
 
             return Ok(result);
         }
 
-        // 3. NGHIỆP VỤ MƯỢN SÁCH (POST)
+        // 3. NGHIỆP VỤ MƯỢN SÁCH (POST) - ĐÃ CẬP NHẬT TRỪ KHO
         [HttpPost]
         public async Task<ActionResult<Borrow>> PostBorrow(Borrow borrow)
         {
             var book = await _context.Books.FindAsync(borrow.BookId);
             if (book == null) return NotFound("Sách không tồn tại.");
 
-            if (book.Status != "Available") return BadRequest("Sách này hiện không sẵn sàng.");
+            if (book.Quantity <= 0)
+            {
+                return BadRequest("Sách đã hết trong kho, không thể thực hiện mượn.");
+            }
 
-            // Gán giá trị mặc định
             borrow.BorrowDate = DateTime.Now;
             borrow.CreatedAt = DateTime.Now;
             borrow.Status = BorrowStatus.BORROWED;
-            if (borrow.DueDate == default) borrow.DueDate = DateTime.Now.AddDays(14);
 
-            book.Status = "Borrowed";
+            if (borrow.DueDate == default)
+                borrow.DueDate = DateTime.Now.AddDays(14);
+
+            // GIẢM SỐ LƯỢNG
+            book.Quantity -= 1;
+
+            if (book.Quantity == 0)
+            {
+                book.Status = "Borrowed";
+            }
 
             _context.Borrows.Add(borrow);
             await _context.SaveChangesAsync();
@@ -99,7 +104,7 @@ namespace PhanAnhMinh.Controllers
             return CreatedAtAction("GetBorrow", new { id = borrow.Id }, borrow);
         }
 
-        // 4. CẬP NHẬT TRẠNG THÁI TRẢ SÁCH NHANH (PUT)
+        // 4. CẬP NHẬT TRẠNG THÁI TRẢ SÁCH (PUT) - CẬP NHẬT: CỘNG LẠI KHO
         [HttpPut("return/{id}")]
         public async Task<IActionResult> ReturnBook(int id)
         {
@@ -115,6 +120,8 @@ namespace PhanAnhMinh.Controllers
 
             if (borrow.Book != null)
             {
+                // CỘNG LẠI SỐ LƯỢNG VÀO KHO
+                borrow.Book.Quantity += 1;
                 borrow.Book.Status = "Available";
             }
 
@@ -122,7 +129,7 @@ namespace PhanAnhMinh.Controllers
             return Ok(new { message = "Trả sách thành công!" });
         }
 
-        // 5. XÓA ĐƠN MƯỢN
+        // 5. XÓA ĐƠN MƯỢN - CẬP NHẬT: HOÀN TRẢ KHO NẾU ĐƠN CHƯA TRẢ SÁCH
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBorrow(int id)
         {
@@ -130,8 +137,11 @@ namespace PhanAnhMinh.Controllers
             if (borrow == null) return NotFound();
 
             var book = await _context.Books.FindAsync(borrow.BookId);
+
+            // Nếu đơn này chưa trả mà đã bị xóa (hủy đơn), thì phải trả lại số lượng cho kho
             if (book != null && borrow.ReturnDate == null)
             {
+                book.Quantity += 1;
                 book.Status = "Available";
             }
 
