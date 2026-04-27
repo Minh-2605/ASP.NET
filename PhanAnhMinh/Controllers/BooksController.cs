@@ -27,17 +27,8 @@ namespace PhanAnhMinh.Controllers
         public async Task<IActionResult> GetBooks()
         {
             var books = await _context.Books
-                .AsNoTracking() // Tăng tốc độ truy vấn
-                .Select(b => new {
-                    id = b.Id,
-                    title = b.Title,
-                    author = b.Author,
-                    categoryId = b.CategoryId,
-                    quantity = b.Quantity,
-                    image = b.Image,
-                    status = b.Status
-                })
-                .ToListAsync();
+                .AsNoTracking()
+                .ToListAsync(); // Trả về nguyên bản Model Book
             return Ok(books);
         }
 

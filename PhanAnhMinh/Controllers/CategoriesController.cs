@@ -25,16 +25,9 @@ namespace PhanAnhMinh.Controllers
 
         // GET: api/Categories
         [HttpGet]
-        public async Task<IActionResult> GetCategories()
+        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
         {
-            var categories = await _context.Categories
-                .AsNoTracking()
-                .Select(c => new {
-                    id = c.Id,
-                    name = c.Name
-                })
-                .ToListAsync();
-            return Ok(categories);
+            return await _context.Categories.ToListAsync();
         }
 
         // GET: api/Categories/5
