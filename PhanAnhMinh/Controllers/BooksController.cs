@@ -22,9 +22,22 @@ namespace PhanAnhMinh.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Book>>> GetBooks()
+        public async Task<ActionResult<IEnumerable<object>>> GetBooks()
         {
-            return await _context.Books.ToListAsync();
+            // Dùng .Select để chỉ lấy các trường cần thiết, tránh lỗi vòng lặp dữ liệu
+            var books = await _context.Books
+                .Select(b => new {
+                    id = b.Id,
+                    title = b.Title,
+                    author = b.Author,
+                    categoryId = b.CategoryId,
+                    quantity = b.Quantity,
+                    image = b.Image,
+                    status = b.Status
+                })
+                .ToListAsync();
+
+            return Ok(books);
         }
 
         [HttpGet("{id}")]
