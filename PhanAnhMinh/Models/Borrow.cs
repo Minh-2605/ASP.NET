@@ -1,14 +1,15 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization; // Thêm cái này
 
 namespace PhanAnhMinh.Models
 {
     public enum BorrowStatus
     {
-        BORROWED, // Đang mượn
-        RETURNED, // Đã trả
-        LATE      // Quá hạn
+        BORROWED = 0, // Đang mượn
+        RETURNED = 1, // Đã trả
+        LATE = 2      // Quá hạn
     }
 
     public class Borrow
@@ -29,21 +30,23 @@ namespace PhanAnhMinh.Models
         [Required]
         public Guid UserId { get; set; }
 
-        // Navigation property - Chỉ giữ lại 1 User duy nhất để tránh UserId1
+        // FIX: Chỉ định rõ UserId là Foreign Key để tránh sinh ra cột UserId1
+        [ForeignKey("UserId")]
+        [JsonIgnore] // Quan trọng: Chặn vòng lặp JSON ở đây để Swagger không bị lỗi 500
         public virtual User? User { get; set; }
 
         [Required]
-        public DateTime BorrowDate { get; set; } = DateTime.UtcNow;
+        public DateTime BorrowDate { get; set; } = DateTime.Now;
 
         [Required]
-        public DateTime DueDate { get; set; }     // Ngày hẹn trả (Thay thế cho ExpectedReturnDate)
+        public DateTime DueDate { get; set; }
 
-        public DateTime? ReturnDate { get; set; } // Ngày trả thực tế (Thay thế cho ActualReturnDate)
+        public DateTime? ReturnDate { get; set; }
 
         [Required]
         public BorrowStatus Status { get; set; } = BorrowStatus.BORROWED;
 
         [Required]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

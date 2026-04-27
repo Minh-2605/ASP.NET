@@ -20,28 +20,60 @@ namespace PhanAnhMinh.Controllers
             _context = context;
         }
 
-        // 1. LẤY DANH SÁCH MƯỢN (Kèm thông tin Sách và Người dùng)
+        // 1. LẤY DANH SÁCH MƯỢN (Đã sửa để tránh lỗi 500 Circular Reference)
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Borrow>>> GetBorrows()
+        public async Task<IActionResult> GetBorrows()
         {
-            return await _context.Borrows
+            var result = await _context.Borrows
                 .Include(b => b.Book)
                 .Include(b => b.User)
                 .OrderByDescending(b => b.BorrowDate)
+                .Select(b => new {
+                    id = b.Id,
+                    bookId = b.BookId,
+                    // Lấy Title từ object Book, nếu null thì hiện N/A
+                    book = b.Book != null ? new { title = b.Book.Title } : null,
+                    userId = b.UserId,
+                    // Ưu tiên lấy Username từ bảng User nếu có liên kết
+                    borrowerName = b.User != null ? b.User.Username : b.BorrowerName,
+                    borrowDate = b.BorrowDate,
+                    dueDate = b.DueDate,
+                    returnDate = b.ReturnDate,
+                    status = (int)b.Status,
+                    note = b.Note
+                })
                 .ToListAsync();
+
+            return Ok(result);
         }
 
         // 2. XEM CHI TIẾT 1 ĐƠN MƯỢN
         [HttpGet("{id}")]
-        public async Task<ActionResult<Borrow>> GetBorrow(int id)
+        public async Task<IActionResult> GetBorrow(int id)
         {
-            var borrow = await _context.Borrows
+            var b = await _context.Borrows
                 .Include(b => b.Book)
                 .Include(b => b.User)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
-            if (borrow == null) return NotFound("Không tìm thấy đơn mượn.");
-            return borrow;
+            if (b == null) return NotFound("Không tìm thấy đơn mượn.");
+
+            // Trả về object sạch để tránh lỗi vòng lặp
+            var result = new
+            {
+                id = b.Id,
+                bookId = b.BookId,
+                book = b.Book != null ? new { title = b.Book.Title } : null,
+                userId = b.UserId,
+                borrowerName = b.User != null ? b.User.Username : b.BorrowerName,
+                borrowDate = b.BorrowDate,
+                dueDate = b.DueDate,
+                returnDate = b.ReturnDate,
+                status = (int)b.Status,
+                note = b.Note
+            };
+
+            return Ok(result);
         }
 
         // 3. NGHIỆP VỤ MƯỢN SÁCH (POST)
@@ -51,16 +83,14 @@ namespace PhanAnhMinh.Controllers
             var book = await _context.Books.FindAsync(borrow.BookId);
             if (book == null) return NotFound("Sách không tồn tại.");
 
-            // Chỉ cho mượn nếu sách đang Available
             if (book.Status != "Available") return BadRequest("Sách này hiện không sẵn sàng.");
 
-            // Gán các giá trị mặc định cho đơn mới
-            borrow.BorrowDate = DateTime.UtcNow;
-            borrow.CreatedAt = DateTime.UtcNow;
+            // Gán giá trị mặc định
+            borrow.BorrowDate = DateTime.Now;
+            borrow.CreatedAt = DateTime.Now;
             borrow.Status = BorrowStatus.BORROWED;
-            if (borrow.DueDate == default) borrow.DueDate = DateTime.UtcNow.AddDays(14);
+            if (borrow.DueDate == default) borrow.DueDate = DateTime.Now.AddDays(14);
 
-            // Chuyển trạng thái sách sang mượn
             book.Status = "Borrowed";
 
             _context.Borrows.Add(borrow);
@@ -69,29 +99,7 @@ namespace PhanAnhMinh.Controllers
             return CreatedAtAction("GetBorrow", new { id = borrow.Id }, borrow);
         }
 
-        // 4. CẬP NHẬT THÔNG TIN ĐƠN MƯỢN (PUT)
-        // Giải quyết lỗi 405 Method Not Allowed khi gọi trực tiếp vào ID
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutBorrow(int id, Borrow borrow)
-        {
-            if (id != borrow.Id) return BadRequest("ID không khớp.");
-
-            _context.Entry(borrow).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Borrows.Any(e => e.Id == id)) return NotFound();
-                throw;
-            }
-
-            return NoContent();
-        }
-
-        // 5. NGHIỆP VỤ TRẢ SÁCH NHANH (PUT)
+        // 4. CẬP NHẬT TRẠNG THÁI TRẢ SÁCH NHANH (PUT)
         [HttpPut("return/{id}")]
         public async Task<IActionResult> ReturnBook(int id)
         {
@@ -102,28 +110,25 @@ namespace PhanAnhMinh.Controllers
             if (borrow == null) return NotFound("Đơn mượn không tồn tại.");
             if (borrow.ReturnDate != null) return BadRequest("Sách này đã được trả rồi.");
 
-            // Cập nhật ngày trả và trạng thái
-            borrow.ReturnDate = DateTime.UtcNow;
+            borrow.ReturnDate = DateTime.Now;
             borrow.Status = BorrowStatus.RETURNED;
 
-            // Mở khóa sách để người khác mượn
             if (borrow.Book != null)
             {
                 borrow.Book.Status = "Available";
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Trả sách thành công!", status = "RETURNED" });
+            return Ok(new { message = "Trả sách thành công!" });
         }
 
-        // 6. XÓA ĐƠN MƯỢN (DELETE)
+        // 5. XÓA ĐƠN MƯỢN
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBorrow(int id)
         {
             var borrow = await _context.Borrows.FindAsync(id);
             if (borrow == null) return NotFound();
 
-            // Nếu xóa đơn mượn khi chưa trả sách, trả lại trạng thái sách về Available
             var book = await _context.Books.FindAsync(borrow.BookId);
             if (book != null && borrow.ReturnDate == null)
             {
