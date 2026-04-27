@@ -26,10 +26,17 @@ namespace PhanAnhMinh.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBooks()
         {
-            var books = await _context.Books
-                .AsNoTracking()
-                .ToListAsync(); // Trả về nguyên bản Model Book
-            return Ok(books);
+            try
+            {
+                // Trả về danh sách thô, không Select thủ công nữa để tránh lỗi Mapping
+                var books = await _context.Books.AsNoTracking().ToListAsync();
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                // Nếu vẫn lỗi, dòng này sẽ giúp chủ nhân thấy lỗi gì trong Log của Render
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         [HttpGet("{id}")]
