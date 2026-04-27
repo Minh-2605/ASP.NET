@@ -1,17 +1,19 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PhanAnhMinh.Data;
 using PhanAnhMinh.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace PhanAnhMinh.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [EnableCors("AllowAll")]
     public class CategoriesController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -23,9 +25,16 @@ namespace PhanAnhMinh.Controllers
 
         // GET: api/Categories
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+        public async Task<IActionResult> GetCategories()
         {
-            return await _context.Categories.ToListAsync();
+            var categories = await _context.Categories
+                .AsNoTracking()
+                .Select(c => new {
+                    id = c.Id,
+                    name = c.Name
+                })
+                .ToListAsync();
+            return Ok(categories);
         }
 
         // GET: api/Categories/5

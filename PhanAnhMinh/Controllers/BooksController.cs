@@ -1,17 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PhanAnhMinh.Data;
 using PhanAnhMinh.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace PhanAnhMinh.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [EnableCors("AllowAll")]
     public class BooksController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -22,10 +24,10 @@ namespace PhanAnhMinh.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<object>>> GetBooks()
+        public async Task<IActionResult> GetBooks()
         {
-            // Dùng .Select để chỉ lấy các trường cần thiết, tránh lỗi vòng lặp dữ liệu
             var books = await _context.Books
+                .AsNoTracking() // Tăng tốc độ truy vấn
                 .Select(b => new {
                     id = b.Id,
                     title = b.Title,
@@ -36,7 +38,6 @@ namespace PhanAnhMinh.Controllers
                     status = b.Status
                 })
                 .ToListAsync();
-
             return Ok(books);
         }
 
