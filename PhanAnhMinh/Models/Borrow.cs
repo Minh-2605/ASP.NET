@@ -48,5 +48,7 @@ namespace PhanAnhMinh.Models
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        
     }
 }

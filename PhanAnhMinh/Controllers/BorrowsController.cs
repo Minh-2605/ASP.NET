@@ -40,7 +40,7 @@ namespace PhanAnhMinh.Controllers
                     dueDate = b.DueDate,
                     returnDate = b.ReturnDate,
                     status = (int)b.Status,
-                    note = b.Note
+                    
                 })
                 .ToListAsync();
 
@@ -70,7 +70,7 @@ namespace PhanAnhMinh.Controllers
                 dueDate = b.DueDate,
                 returnDate = b.ReturnDate,
                 status = (int)b.Status,
-                note = b.Note
+                
             };
 
             return Ok(result);

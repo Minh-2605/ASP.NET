@@ -10,7 +10,6 @@ namespace PhanAnhMinh.Data
         public DbSet<Book> Books { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Borrow> Borrows { get; set; }
-        public DbSet<Review> Reviews { get; set; }
         public DbSet<User> Users { get; set; }
     }
 }
