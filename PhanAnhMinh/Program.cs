@@ -50,3 +50,22 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Tự động kiểm tra và tạo bảng (Migration) khi khởi động
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>(); // Thay bằng tên DbContext của bạn
+        if (context.Database.GetPendingMigrations().Any())
+        {
+            context.Database.Migrate();
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Đã xảy ra lỗi khi tạo bảng database.");
+    }
+}
