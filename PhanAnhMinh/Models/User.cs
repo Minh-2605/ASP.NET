@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic; // Thêm dòng này
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization; // Thêm dòng này
+using System.Text.Json.Serialization;
 
 namespace PhanAnhMinh.Models
 {
@@ -21,14 +21,12 @@ namespace PhanAnhMinh.Models
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
-        [Required]
-        public DateTime CreatedAt { get; set; } = DateTime.Now; // Dùng Now cho đồng bộ giờ VN
+        // BỎ [Required] Ở ĐÂY để Server tự sinh giá trị
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        [Required]
+        // BỎ [Required] Ở ĐÂY vì đã có giá trị mặc định là "User"
         public string Role { get; set; } = "User";
 
-        // THÊM DÒNG NÀY: Để EF Core hiểu mối quan hệ 1 User có nhiều đơn mượn
-        // [JsonIgnore] rất quan trọng để tránh vòng lặp: User -> Borrow -> User -> ...
         [JsonIgnore]
         public virtual ICollection<Borrow>? Borrows { get; set; }
     }
